@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>아날로그 시계 — Gray Clock</title>
+<meta name="description" content="그레이 톤의 미니멀 아날로그 시계. 현재 시각을 실시간으로 보여줍니다.">
+<style>
+  :root{
+    --bg:#2b2d31;
+    --bg2:#1f2124;
+    --face:#3a3d42;
+    --face2:#2e3135;
+    --rim:#55585e;
+    --tick:#9a9ea5;
+    --tick-minor:#5e6268;
+    --num:#c9ccd1;
+    --hand:#e2e4e7;
+    --hand-dim:#b7bac0;
+    --sec:#8d9198;
+    --text:#d4d6da;
+    --muted:#8a8e95;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(ellipse at 50% 35%, var(--bg) 0%, var(--bg2) 75%);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",Roboto,sans-serif;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100vh;padding:16px;gap:22px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .ad{width:100%;max-width:728px;min-height:90px;display:none;align-items:center;justify-content:center;
+      color:var(--muted);font-size:12px;border:1px dashed #44474d;border-radius:8px}
+  .ad.on{display:flex}
+  .clock{
+    width:min(78vw,78vh,520px);aspect-ratio:1/1;
+    filter:drop-shadow(0 18px 30px rgba(0,0,0,.45));
+  }
+  svg{width:100%;height:100%;display:block}
+  .digital{
+    font-variant-numeric:tabular-nums;letter-spacing:.08em;
+    font-size:clamp(18px,3.2vw,26px);color:var(--text);font-weight:300;
+  }
+  .date{color:var(--muted);font-size:clamp(12px,2vw,15px);letter-spacing:.06em;margin-top:6px;text-align:center}
+  footer{position:fixed;bottom:10px;color:#6b6f76;font-size:11px;letter-spacing:.05em}
+  footer a{color:#8a8e95;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="ad" id="adTop">AD</div>
+
+<div class="clock" aria-label="아날로그 시계">
+<svg viewBox="0 0 400 400" role="img">
+  <defs>
+    <radialGradient id="face" cx="50%" cy="42%" r="60%">
+      <stop offset="0%" stop-color="#43474d"/>
+      <stop offset="100%" stop-color="#2d3035"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6c7077"/>
+      <stop offset="50%" stop-color="#3b3e43"/>
+      <stop offset="100%" stop-color="#5c6067"/>
+    </linearGradient>
+    <linearGradient id="hand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#eceef0"/>
+      <stop offset="100%" stop-color="#b9bcc2"/>
+    </linearGradient>
+    <filter id="handShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="#000" flood-opacity=".45"/>
+    </filter>
+  </defs>
+
+  <!-- rim -->
+  <circle cx="200" cy="200" r="196" fill="url(#rim)"/>
+  <circle cx="200" cy="200" r="186" fill="#232528"/>
+  <circle cx="200" cy="200" r="182" fill="url(#face)"/>
+
+  <!-- ticks -->
+  <g id="ticks" stroke-linecap="round"></g>
+  <!-- numerals -->
+  <g id="nums" fill="#c9ccd1" font-size="22" font-weight="300" text-anchor="middle" dominant-baseline="central"
+     font-family="Georgia,'Times New Roman',serif"></g>
+
+  <!-- hands -->
+  <g id="hour" filter="url(#handShadow)">
+    <path d="M200 215 L193 200 L197 95 L203 95 L207 200 Z" fill="url(#hand)"/>
+  </g>
+  <g id="min" filter="url(#handShadow)">
+    <path d="M200 218 L195 200 L198.5 45 L201.5 45 L205 200 Z" fill="url(#hand)"/>
+  </g>
+  <g id="sec" filter="url(#handShadow)">
+    <line x1="200" y1="235" x2="200" y2="38" stroke="#8d9198" stroke-width="1.6" stroke-linecap="round"/>
+    <circle cx="200" cy="235" r="5" fill="#8d9198"/>
+  </g>
+  <circle cx="200" cy="200" r="7" fill="#d8dadd"/>
+  <circle cx="200" cy="200" r="2.5" fill="#2b2d31"/>
+</svg>
+</div>
+
+<div>
+  <div class="digital" id="digital">--:--:--</div>
+  <div class="date" id="date"></div>
+</div>
+
+<div class="ad" id="adBottom">AD</div>
+<footer>Gray Clock · <a href="https://superiors1112-coder.github.io/">superiors1112-coder.github.io</a></footer>
+
+<script>
+(function(){
+  var ticks=document.getElementById('ticks'), nums=document.getElementById('nums');
+  var NS='http://www.w3.org/2000/svg', h='', n='';
+  for(var i=0;i<60;i++){
+    var a=i*6*Math.PI/180, major=i%5===0;
+    var r1=major?158:166, r2=172;
+    var x1=200+r1*Math.sin(a), y1=200-r1*Math.cos(a);
+    var x2=200+r2*Math.sin(a), y2=200-r2*Math.cos(a);
+    h+='<line x1="'+x1.toFixed(2)+'" y1="'+y1.toFixed(2)+'" x2="'+x2.toFixed(2)+'" y2="'+y2.toFixed(2)+
+       '" stroke="'+(major?'#9a9ea5':'#5e6268')+'" stroke-width="'+(major?3:1.2)+'"/>';
+  }
+  ticks.innerHTML=h;
+  for(var k=1;k<=12;k++){
+    var b=k*30*Math.PI/180, rr=136;
+    n+='<text x="'+(200+rr*Math.sin(b)).toFixed(2)+'" y="'+(200-rr*Math.cos(b)).toFixed(2)+'">'+k+'</text>';
+  }
+  nums.innerHTML=n;
+
+  var hourEl=document.getElementById('hour'), minEl=document.getElementById('min'), secEl=document.getElementById('sec');
+  var dig=document.getElementById('digital'), dateEl=document.getElementById('date');
+  var days=['일','월','화','수','목','금','토'];
+  function pad(v){return v<10?'0'+v:v}
+  function rot(el,deg){el.setAttribute('transform','rotate('+deg+' 200 200)')}
+  var lastSec=-1;
+  function draw(){
+    var d=new Date();
+    var ms=d.getMilliseconds(), s=d.getSeconds(), m=d.getMinutes(), hh=d.getHours();
+    var sf=s+ms/1000, mf=m+sf/60, hf=(hh%12)+mf/60;
+    rot(secEl,sf*6); rot(minEl,mf*6); rot(hourEl,hf*30);
+    if(s!==lastSec){
+      lastSec=s;
+      dig.textContent=pad(hh)+':'+pad(m)+':'+pad(s);
+      dateEl.textContent=d.getFullYear()+'. '+pad(d.getMonth()+1)+'. '+pad(d.getDate())+' ('+days[d.getDay()]+')';
+      document.title=pad(hh)+':'+pad(m)+' — Gray Clock';
+    }
+  }
+  draw();
+  var raf=window.requestAnimationFrame;
+  function loop(){draw(); raf(loop)}
+  if(raf) raf(loop); else setInterval(draw,50);
+  // 탭이 숨겨졌다 돌아올 때도 즉시 갱신
+  document.addEventListener('visibilitychange',draw);
+})();
+</script>
+</body>
+</html>
